@@ -265,12 +265,18 @@ public class SpringApplication {
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+		// 配置资源加载器
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null");
+		// 配置primarySources
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+		// 应用环境检测
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
+		// 配置资源初始化器
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+		// 配置应用监听器
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+		// 配置main方法所在类
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
@@ -297,28 +303,41 @@ public class SpringApplication {
 	 */
 	public ConfigurableApplicationContext run(String... args) {
 		StopWatch stopWatch = new StopWatch();
+		// 计时器开始计时
 		stopWatch.start();
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
+		// headless模式赋值：表示当前工作模式是在一个没有显示器，没有键盘的环境中。
 		configureHeadlessProperty();
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 发送ApplicationStartingEvent
 		listeners.starting();
 		try {
+
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 配置环境模块，发送ApplicationEnvironmentPreparedEvent
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
 			configureIgnoreBeanInfo(environment);
+			// 打印banner
 			Banner printedBanner = printBanner(environment);
+			// 创建应用上下文对象
 			context = createApplicationContext();
+			// 初始化失败分析器，打印失败的原因
 			exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
 					new Class[] { ConfigurableApplicationContext.class }, context);
+			// 关联springboot组件和应用上下文对象，发送发送ApplicationContextInitializedEvent，ApplicationPreparedEvent事件
 			prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+			// 刷新上下文==》applicationcontext.refresh==>完成spring的bean加载
 			refreshContext(context);
 			afterRefresh(context, applicationArguments);
+			// 计时器停止计时
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
 			}
+			// 发送ApplicationStaredEvent事件
 			listeners.started(context);
+			// 调用框架启动扩展类
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -327,6 +346,7 @@ public class SpringApplication {
 		}
 
 		try {
+			// 发送ApplicationReadyEvent事件
 			listeners.running(context);
 		}
 		catch (Throwable ex) {
@@ -339,9 +359,11 @@ public class SpringApplication {
 	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments) {
 		// Create and configure the environment
+		// 配置环境模块
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
 		ConfigurationPropertySources.attach(environment);
+		// 发送ApplicationEnvironmentPreparedEvent
 		listeners.environmentPrepared(environment);
 		bindToSpringApplication(environment);
 		if (!this.isCustomEnvironment) {
@@ -368,6 +390,7 @@ public class SpringApplication {
 		context.setEnvironment(environment);
 		postProcessApplicationContext(context);
 		applyInitializers(context);
+		// 发送ApplicationContextInitializedEvent
 		listeners.contextPrepared(context);
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
@@ -389,7 +412,9 @@ public class SpringApplication {
 		// Load the sources
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
+		// *************加载sources到context************
 		load(context, sources.toArray(new Object[0]));
+		// 发送发送ApplicationPreparedEvent
 		listeners.contextLoaded(context);
 	}
 
